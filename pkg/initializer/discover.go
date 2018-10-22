@@ -28,19 +28,19 @@ import (
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1"
 )
 
-type disovery struct {
+type migrationDiscovery struct {
 	disocveryClient  discovery.ServerResourcesInterface
 	crdClient        v1beta1.CustomResourceDefinitionInterface
 	apiserviceClient apiregistrationv1.APIServiceInterface
 }
 
-// NewDiscovery returns a discovery struct.
+// NewDiscovery returns a migrationDiscovery struct.
 func NewDiscovery(
 	disocveryClient discovery.ServerResourcesInterface,
 	crdClient v1beta1.CustomResourceDefinitionInterface,
 	apiserviceClient apiregistrationv1.APIServiceInterface,
-) *disovery {
-	return &disovery{
+) *migrationDiscovery {
+	return &migrationDiscovery{
 		disocveryClient:  disocveryClient,
 		crdClient:        crdClient,
 		apiserviceClient: apiserviceClient,
@@ -63,7 +63,7 @@ func NewDiscovery(
 //
 // TODO: if https://github.com/kubernetes/community/pull/2805 is realized,
 // refactor this method to build resource list accurately.
-func (d *disovery) FindMigratableResources() ([]schema.GroupVersionResource, error) {
+func (d *migrationDiscovery) FindMigratableResources() ([]schema.GroupVersionResource, error) {
 	customGroups, err := d.findCustomGroups()
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (d *disovery) FindMigratableResources() ([]schema.GroupVersionResource, err
 	return ret, nil
 }
 
-func (d *disovery) findCustomGroups() (sets.String, error) {
+func (d *migrationDiscovery) findCustomGroups() (sets.String, error) {
 	ret := sets.NewString()
 	l, err := d.crdClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -127,7 +127,7 @@ func (d *disovery) findCustomGroups() (sets.String, error) {
 	return ret, nil
 }
 
-func (d *disovery) findAggregatedGroups() (sets.String, error) {
+func (d *migrationDiscovery) findAggregatedGroups() (sets.String, error) {
 	ret := sets.NewString()
 	l, err := d.apiserviceClient.List(metav1.ListOptions{})
 	if err != nil {
