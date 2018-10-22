@@ -151,7 +151,9 @@ func (init *initializer) Initialize() error {
 	if err := init.initializeCRD(); err != nil {
 		return err
 	}
-	// create namespace?
+	// TOOD: probably the user needs to run yamls to create namespace,
+	// service account, rbac rules, then run the initializer in the created
+	// namespace.
 	if err := init.initializeNamespace(); err != nil {
 		return err
 	}
