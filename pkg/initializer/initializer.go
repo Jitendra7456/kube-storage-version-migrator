@@ -46,14 +46,14 @@ func NewInitializer(
 	crdClient v1beta1.CustomResourceDefinitionInterface,
 	apiserviceClient apiregistrationv1.APIServiceInterface,
 	namespaceClient corev1.NamespaceInterface,
-	migrationClient v1alpha1.StorageVersionMigrationInterface,
+	migrationGetter v1alpha1.StorageVersionMigrationsGetter,
 ) *initializer {
 	d := NewDiscovery(disocveryClient, crdClient, apiserviceClient)
 	return &initializer{
 		discovery:       d,
 		crdClient:       crdClient,
 		namespaceClient: namespaceClient,
-		migrationClient: migrationClient,
+		migrationClient: migrationGetter.StorageVersionMigrations(namespaceName),
 	}
 }
 
