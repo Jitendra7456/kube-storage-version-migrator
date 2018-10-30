@@ -111,6 +111,25 @@ const (
       "categories": [
         "all"
       ]
+    },
+    {
+      "name": "events",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "Event",
+      "verbs": [
+        "create",
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ],
+      "shortNames": [
+        "ev"
+      ]
     }
   ]
 }`
@@ -201,6 +220,34 @@ const (
   ]
 }`
 
+	// Events are blacklisted from migration.
+	eventsv1beta1ResourceList = `{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "events.k8s.io/v1beta1",
+  "resources": [
+    {
+      "name": "events",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "Event",
+      "verbs": [
+        "create",
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ],
+      "shortNames": [
+        "ev"
+      ]
+    }
+  ]
+}`
+
 	crd = `{
   "kind": "CustomResourceDefinition",
   "apiVersion": "apiextensions.k8s.io/v1beta1",
@@ -262,7 +309,7 @@ const (
 
 func fakeAPIResourceLists(t *testing.T) []*metav1.APIResourceList {
 	var ret []*metav1.APIResourceList
-	for _, data := range []string{customResourceList, aggregatedResourceList, extensionsv1beta1ResourceList, appsv1ResourceList, v1ResourceList} {
+	for _, data := range []string{customResourceList, aggregatedResourceList, extensionsv1beta1ResourceList, appsv1ResourceList, v1ResourceList, eventsv1beta1ResourceList} {
 		l := &metav1.APIResourceList{}
 		err := json.Unmarshal([]byte(data), l)
 		if err != nil {

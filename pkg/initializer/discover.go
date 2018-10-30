@@ -47,6 +47,10 @@ func NewDiscovery(
 	}
 }
 
+var blackListResources = sets.NewString(
+	"events",
+)
+
 // FindMigratableResources finds all the resources that potentially need
 // migration. Although all migratable resources are accessible via multiple
 // versions, the returned list only include one version.
@@ -93,6 +97,9 @@ func (d *migrationDiscovery) FindMigratableResources() ([]schema.GroupVersionRes
 		for _, r := range resourceList.APIResources {
 			// ignore subresources
 			if strings.Contains(r.Name, "/") {
+				continue
+			}
+			if blackListResources.Has(r.Name) {
 				continue
 			}
 			// ignore resources that cannot be listed and updated
