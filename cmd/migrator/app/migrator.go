@@ -10,8 +10,14 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+)
+
+const (
+	migratorUserAgent = "storage-version-migration-migrator"
 )
 
 func NewInitializerCommand() *cobra.Command {
@@ -38,7 +44,7 @@ func Run(stopCh <-chan struct{}) error {
 	// if err != nil {
 	// 	return err
 	// }
-	dynamic, err := dynamic.NewForConfig(config)
+	dynamic, err := dynamic.NewForConfig(rest.AddUserAgent(config, migratorUserAgent))
 	if err != nil {
 		return err
 	}

@@ -10,9 +10,14 @@ import (
 	"github.com/spf13/cobra"
 	crdclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	apiserviceclient "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+)
+
+const (
+	initializerUserAgent = "storage-version-migration-initializer"
 )
 
 func NewInitializerCommand() *cobra.Command {
@@ -39,7 +44,7 @@ func Run() error {
 	// if err != nil {
 	// 	return err
 	// }
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(rest.AddUserAgent(config, initializerUserAgent))
 	if err != nil {
 		return err
 	}
