@@ -122,6 +122,7 @@ func (km *KubeMigrator) processOne(obj interface{}) error {
 // apiserver, because updateStatus is the last step of the migration, it's a
 // pity if the entire migration has to start over merely because status update
 // failure.
+// updateStatus removes other KNOWN conditions.
 func (km *KubeMigrator) updateStatus(m *migrationv1alpha1.StorageVersionMigration, condition migrationv1alpha1.MigrationConditionType, message string) (*migrationv1alpha1.StorageVersionMigration, error) {
 	backoff := wait.Backoff{
 		Steps:    6,
@@ -130,17 +131,25 @@ func (km *KubeMigrator) updateStatus(m *migrationv1alpha1.StorageVersionMigratio
 		Jitter:   0.1,
 	}
 	return m, wait.ExponentialBackoff(backoff, func() (bool, error) {
+		var newConditions []migrationv1alpha1.MigrationCondition
+		for _, c := range m.Status.Conditions {
+			switch c.Type {
+			case migrationv1alpha1.MigrationRunning:
+			case migrationv1alpha1.MigrationSucceeded:
+			case migrationv1alpha1.MigrationFailed:
+			default:
+				// keeps unknown conditions
+				newConditions = append(newConditions, c)
+			}
+		}
 		newCondition := migrationv1alpha1.MigrationCondition{
 			Type:           condition,
 			Status:         corev1.ConditionTrue,
 			LastUpdateTime: metav1.Now(),
 			Message:        message,
 		}
-		if i := indexOfCondition(m, condition); i != -1 {
-			m.Status.Conditions[i] = newCondition
-		} else {
-			m.Status.Conditions = append(m.Status.Conditions, newCondition)
-		}
+		newConditions = append(newConditions, newCondition)
+		m.Status.Conditions = newConditions
 
 		_, err := km.migrationClient.MigrationV1alpha1().StorageVersionMigrations(m.Namespace).UpdateStatus(m)
 		if err == nil {
