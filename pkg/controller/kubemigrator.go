@@ -99,7 +99,8 @@ func (km *KubeMigrator) processOne(obj interface{}) error {
 	if hasCondition(m, migrationv1alpha1.MigrationSucceeded) || hasCondition(m, migrationv1alpha1.MigrationFailed) {
 		return fmt.Errorf("The migration has already completed for %v", m)
 	}
-	if err := km.updateStatus(m, migrationv1alpha1.MigrationRunning, ""); err != nil {
+	m, err = km.updateStatus(m, migrationv1alpha1.MigrationRunning, "")
+	if err != nil {
 		return err
 	}
 	core := migrator.NewMigrator(resource(m), km.dynamic)
@@ -110,40 +111,46 @@ func (km *KubeMigrator) processOne(obj interface{}) error {
 	err = core.Run()
 	utilruntime.HandleError(err)
 	if err == nil {
-		return km.updateStatus(m, migrationv1alpha1.MigrationSucceeded, "")
+		_, err = km.updateStatus(m, migrationv1alpha1.MigrationSucceeded, "")
+		return err
 	}
-	return km.updateStatus(m, migrationv1alpha1.MigrationFailed, err.Error())
+	_, err = km.updateStatus(m, migrationv1alpha1.MigrationFailed, err.Error())
+	return err
 }
 
 // updateStatus always retry no matter what kind of error is returned by the
 // apiserver, because updateStatus is the last step of the migration, it's a
 // pity if the entire migration has to start over merely because status update
 // failure.
-func (km *KubeMigrator) updateStatus(m *migrationv1alpha1.StorageVersionMigration, condition migrationv1alpha1.MigrationConditionType, message string) error {
-	newCondition := migrationv1alpha1.MigrationCondition{
-		Type:           condition,
-		Status:         corev1.ConditionTrue,
-		LastUpdateTime: metav1.Now(),
-		Message:        message,
-	}
-	if i := indexOfCondition(m, condition); i != -1 {
-		m.Status.Conditions[i] = newCondition
-	} else {
-		m.Status.Conditions = append(m.Status.Conditions, newCondition)
-	}
-
+func (km *KubeMigrator) updateStatus(m *migrationv1alpha1.StorageVersionMigration, condition migrationv1alpha1.MigrationConditionType, message string) (*migrationv1alpha1.StorageVersionMigration, error) {
 	backoff := wait.Backoff{
 		Steps:    6,
 		Duration: 10 * time.Millisecond,
 		Factor:   5.0,
 		Jitter:   0.1,
 	}
-	return wait.ExponentialBackoff(backoff, func() (bool, error) {
+	return m, wait.ExponentialBackoff(backoff, func() (bool, error) {
+		newCondition := migrationv1alpha1.MigrationCondition{
+			Type:           condition,
+			Status:         corev1.ConditionTrue,
+			LastUpdateTime: metav1.Now(),
+			Message:        message,
+		}
+		if i := indexOfCondition(m, condition); i != -1 {
+			m.Status.Conditions[i] = newCondition
+		} else {
+			m.Status.Conditions = append(m.Status.Conditions, newCondition)
+		}
+
 		_, err := km.migrationClient.MigrationV1alpha1().StorageVersionMigrations(m.Namespace).UpdateStatus(m)
 		if err == nil {
 			return true, nil
 		}
-		// always retry
-		return false, err
+		// Always refresh and retry, no matter what kind of error is returned by the apiserver.
+		updated, err := km.migrationClient.MigrationV1alpha1().StorageVersionMigrations(m.Namespace).Get(m.Name, metav1.GetOptions{})
+		if err == nil {
+			m = updated
+		}
+		return false, nil
 	})
 }
