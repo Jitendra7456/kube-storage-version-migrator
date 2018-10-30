@@ -57,7 +57,7 @@ func (km *KubeMigrator) Run(stopCh <-chan struct{}) {
 		utilruntime.HandleError(fmt.Errorf("Unable to sync caches"))
 		return
 	}
-	go wait.Until(km.process, time.Second, stopCh)
+	wait.Until(km.process, time.Second, stopCh)
 }
 
 func (km *KubeMigrator) process() {
