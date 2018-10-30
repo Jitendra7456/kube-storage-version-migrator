@@ -85,9 +85,15 @@ func migrationCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 }
 
 func migrationForResource(resource schema.GroupVersionResource) *migrationv1alpha1.StorageVersionMigration {
+	var name string
+	if len(resource.Group) != 0 {
+		name = fmt.Sprintf("%s.%s.%s-", resource.Group, resource.Version, resource.Resource)
+	} else {
+		name = fmt.Sprintf("%s.%s-", resource.Version, resource.Resource)
+	}
 	return &migrationv1alpha1.StorageVersionMigration{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: resource.String(),
+			GenerateName: name,
 		},
 		Spec: migrationv1alpha1.StorageVersionMigrationSpec{
 			Resource: migrationv1alpha1.GroupVersionResource{
