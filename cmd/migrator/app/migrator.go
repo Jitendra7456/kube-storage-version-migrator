@@ -3,13 +3,15 @@ package app
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	migrationclient "github.com/kubernetes-sigs/kube-storage-version-migrator/pkg/clientset"
 	"github.com/kubernetes-sigs/kube-storage-version-migrator/pkg/controller"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
 
 func NewInitializerCommand() *cobra.Command {
@@ -26,11 +28,16 @@ func NewInitializerCommand() *cobra.Command {
 }
 
 func Run(stopCh <-chan struct{}) error {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
+	// debug only
+	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
 	if err != nil {
 		return err
 	}
+	// creates the in-cluster config
+	// config, err := rest.InClusterConfig()
+	// if err != nil {
+	// 	return err
+	// }
 	dynamic, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return err
