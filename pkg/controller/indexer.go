@@ -39,11 +39,11 @@ func migrationStatusIndexFunc(obj interface{}) ([]string, error) {
 	if !ok {
 		return []string{}, fmt.Errorf("expected StroageVersionMigration, got %#v", reflect.TypeOf(obj))
 	}
-	if hasCondition(m, migration_v1alpha1.MigrationRunning) {
-		return []string{statusRunning}, nil
-	}
 	if hasCondition(m, migration_v1alpha1.MigrationSucceeded) || hasCondition(m, migration_v1alpha1.MigrationFailed) {
 		return []string{statusCompleted}, nil
+	}
+	if hasCondition(m, migration_v1alpha1.MigrationRunning) {
+		return []string{statusRunning}, nil
 	}
 	return []string{statusPending}, nil
 }
