@@ -18,6 +18,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+export REGISTRY="gcr.io/${PROJECT}"
+
 # Retry 10 times with 10s interval to wait for the apiserver to come back.
 function wait-for-apiserver()
 {
@@ -36,17 +38,7 @@ function wait-for-apiserver()
 # Note that the log inidicates that the kubectl in the test driver is v1.10.7
 kubectl version
 
-# TODO: in the real test, create objects here.
-
-# Change the apiserver manifest to change the storage version.
-gcloud compute --project "${PROJECT}" ssh --zone "${KUBE_GCE_ZONE}" "${CLUSTER_NAME}-master" --command \
-"sudo sed -i \"s/--v=/--storage-versions=apps\/v1beta2 --v=/\" /etc/kubernetes/manifests/kube-apiserver.manifest"
-
-wait-for-apiserver 
-
-# TODO: in the real test, remove this block.
-# We use controller revision as the test subject because it has multiple
-# versions, and no controller is going to write to it.
+# TODO: Create a large number of objects of different resource types here.
 cat <<EOF | kubectl create --namespace=default -f -
 apiVersion: apps/v1
 kind: ControllerRevision
@@ -59,7 +51,22 @@ EOF
 
 kubectl get controllerrevisions sample --namespace=default
 
+# Change the apiserver manifest to change the storage version.
+gcloud compute --project "${PROJECT}" ssh --zone "${KUBE_GCE_ZONE}" "${CLUSTER_NAME}-master" --command \
+"sudo sed -i \"s/--v=/--storage-versions=apps\/v1beta2 --v=/\" /etc/kubernetes/manifests/kube-apiserver.manifest"
+
+wait-for-apiserver 
+
 # TODO: run the migrator
+ROOT=$(dirname "${BASH_SOURCE}")/../..
+cd "$(ROOT)"
+make local-manifests
+make push-all
+kubectl apply -f manifests.local/namespace-rbac.yaml
+kubectl apply -f manifests.local/initializer.yaml
+kubectl apply -f manifests.local/migrator.yaml
+
+
 
 # Verify the ControllerRevision is encoded as apps/v1beta2 in etcd.
 result=$(gcloud compute --project "${PROJECT}" ssh --zone "${KUBE_GCE_ZONE}" "${CLUSTER_NAME}-master" --command \
